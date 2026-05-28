@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>eRoute Lido</title>
+    <title>eRoute Lido Charts</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .glass-card { background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 2rem; }
@@ -12,28 +12,25 @@
 
     <header class="glass-card p-6 flex justify-between items-center mb-8">
         <h1 class="text-2xl font-black">PTFS <span class="text-blue-500">REPOSITORY</span></h1>
-        <button onclick="toggleAdmin()" id="adminBtn" class="bg-slate-800 px-6 py-2 rounded-full font-bold text-sm border border-slate-700">
-            🔒 Admin Panel
-        </button>
+        <button onclick="toggleAdmin()" id="adminBtn" class="bg-slate-800 px-6 py-2 rounded-full font-bold text-sm border border-slate-700">🔒 Admin Panel</button>
     </header>
 
     <div class="grid grid-cols-12 gap-6 h-[70vh]">
         <div class="col-span-3 glass-card p-4 overflow-y-auto" id="airportList"></div>
-        <div class="col-span-9 glass-card p-10 flex flex-col items-center justify-center text-center" id="displayArea">
-            <h2 class="text-3xl font-black mb-2" id="airportTitle">Pilih Bandara</h2>
-            <p class="text-slate-400" id="catStatus">Pilih bandara dari daftar untuk melihat ketersediaan charts.</p>
-            <div class="grid grid-cols-3 gap-4 mt-8 w-full max-w-2xl" id="categoryGrid"></div>
+        <div class="col-span-9 glass-card p-10" id="displayArea">
+            <h2 class="text-3xl font-black mb-6" id="airportTitle">Pilih Bandara</h2>
+            <div class="grid grid-cols-3 gap-4" id="categoryGrid"></div>
         </div>
     </div>
 
     <script>
-        // State Awal: Data Kosong (Dummy)
         let db = JSON.parse(localStorage.getItem('ptfs_db')) || {};
         let isAdmin = false;
         const airports = ["IRFD", "IMLR", "IBLT", "ITRC", "IGAR", "ILAR", "IPAP", "IIAB", "IHEN", "IBAR", "IZOL", "ISCM", "IJAF", "IPPH", "ILKL", "ITKO", "IDCS", "IBRD", "IKFL", "ITEY", "ISAU", "IBTH", "ISKP"];
-        
+
         function renderList() {
             const listEl = document.getElementById('airportList');
+            listEl.innerHTML = "";
             airports.forEach(icao => {
                 const div = document.createElement('div');
                 div.className = "p-4 mb-2 bg-white/5 rounded-2xl cursor-pointer hover:bg-blue-600/20";
@@ -48,34 +45,43 @@
             const grid = document.getElementById('categoryGrid');
             grid.innerHTML = "";
             ["APP", "SID", "STAR", "GROUND", "ENROUTE", "REF"].forEach(cat => {
-                const hasData = db[icao] && db[icao][cat];
+                const hasData = db[icao]?.[cat];
                 grid.innerHTML += `
-                    <div class="p-4 bg-slate-900/50 rounded-2xl border ${hasData ? 'border-blue-500/50' : 'border-slate-800'}">
-                        <p class="font-bold text-sm">${cat}</p>
-                        <p class="text-[9px] uppercase mt-1 ${hasData ? 'text-blue-400' : 'text-slate-600'}">
-                            ${hasData ? 'Tersedia' : 'Tak Tersedia'}
-                        </p>
+                    <div class="p-6 bg-slate-900/50 rounded-2xl border ${hasData ? 'border-blue-500' : 'border-slate-800'}">
+                        <p class="font-bold">${cat}</p>
+                        <p class="text-[10px] uppercase mb-4 ${hasData ? 'text-blue-400' : 'text-slate-600'}">${hasData ? 'Tersedia' : 'Tak Tersedia'}</p>
+                        ${isAdmin ? `<button onclick="editData('${icao}','${cat}')" class="text-[10px] bg-slate-700 px-3 py-1 rounded-lg hover:bg-blue-600">EDIT / TAMBAH</button>` : ''}
                     </div>
                 `;
             });
         }
 
-        // Proteksi Password
+        function editData(icao, cat) {
+            const val = prompt("Masukkan URL Link PDF untuk " + cat + " di " + icao + ":", db[icao]?.[cat] || "");
+            if (val !== null) {
+                if(!db[icao]) db[icao] = {};
+                if(val === "") delete db[icao][cat]; // Hapus jika dikosongkan
+                else db[icao][cat] = val;
+                
+                localStorage.setItem('ptfs_db', JSON.stringify(db));
+                renderGrid(icao);
+            }
+        }
+
         function toggleAdmin() {
             if (!isAdmin) {
-                const p = prompt("Masukkan Password Owner:");
+                const p = prompt("Masukkan Password:");
                 if (p === "SHAFF77") {
                     isAdmin = true;
                     document.getElementById('adminBtn').innerText = "🔓 Mode Edit Aktif";
-                    document.getElementById('adminBtn').classList.replace('bg-slate-800', 'bg-emerald-600');
-                    alert("Akses Admin Diterima!");
-                } else {
-                    alert("Password Salah! Akses Ditolak.");
-                }
+                    document.getElementById('adminBtn').className = "bg-emerald-600 px-6 py-2 rounded-full font-bold text-sm";
+                    renderList(); // Refresh tampilan untuk memunculkan tombol edit
+                } else alert("Password Salah!");
             } else {
                 isAdmin = false;
                 document.getElementById('adminBtn').innerText = "🔒 Admin Panel";
-                document.getElementById('adminBtn').classList.replace('bg-emerald-600', 'bg-slate-800');
+                document.getElementById('adminBtn').className = "bg-slate-800 px-6 py-2 rounded-full font-bold text-sm";
+                renderList();
             }
         }
 
